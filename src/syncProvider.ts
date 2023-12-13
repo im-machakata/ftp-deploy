@@ -2,6 +2,7 @@ import prettyBytes from "pretty-bytes";
 import type * as ftp from "basic-ftp";
 import { DiffResult, ErrorCode, IFilePath } from "./types";
 import { ILogger, pluralize, retryRequest, ITimings } from "./utilities";
+import { existsSync } from "fs";
 
 export async function ensureDir(client: ftp.Client, logger: ILogger, timings: ITimings, folder: string): Promise<void> {
     timings.start("changingDir");
@@ -140,6 +141,12 @@ export class FTPSyncProvider implements ISyncProvider {
         this.logger.all(`${typePresent} "${filePath}"`);
 
         if (this.dryRun === false) {
+            // proceed if file exists locally
+            if (!existsSync(this.localPath + filePath)) {
+                this.logger.verbose(`  no need to ${typePast}`);
+                return;
+            }
+            
             await retryRequest(this.logger, async () => await this.client.uploadFrom(this.localPath + filePath, filePath));
         }
 
